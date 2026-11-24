@@ -1,68 +1,64 @@
+---
 # yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
-name: osmatrix
-description: Personal Fedora Silverblue image optimized for laptop with power saving and devtools.
-base-image: ghcr.io/ublue-os/silverblue-main
-image-version: latest
+name: frame-silverblue
+description: Custom Bluefin-DX image without the dinosaur branding.
+
+# Use bluefin-dx as the base image
+base-image: ghcr.io/ublue-os/bluefin-dx
+image-version: stable # Options: latest, stable, gts, or a Fedora version (e.g., 41)
 
 modules:
-  - type: files
-    files:
-      - source: system/usr
-        destination: /usr
-
+  # 1. Remove Bluefin branding packages and restore standard Fedora logos
   - type: dnf
-    repos:
-      files:
-        - https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
-      keys:
-        - https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
     install:
       packages:
-        - brave-browser
-        - gnome-tweaks
-        - wine
-        - winetricks
-        - cabextract
-        - unzip
-        - wget
-        - powertop
-        - tuned
-        - tuned-ppd
-        - lm_sensors
-        - libvirt-daemon-kvm
-        - qemu-kvm
-        - swtpm
-        - virt-manager
+        - fedora-logos
+        - fedora-release-identity-silverblue
+        - gnome-backgrounds
+        - micro
+        - starship
     remove:
       packages:
-        - firefox
-        - firefox-langpacks
-        - power-profiles-daemon
+        - bluefin-logos
+        - bluefin-backgrounds
+        - bluefin-plymouth
+        - bluefin-release
 
-  - type: brew
-    nofile-limits: true
-    brew-analytics: false
+  # 2. Remove remaining Bluefin artwork, custom Plymouth themes, and GNOME overrides
+  - type: script
+    snippets:
+      # Remove custom Bluefin system branding files, wallpapers, and fastfetch dinosaur configs
+      - rm -rf /usr/share/ublue-os/bluefin*
+      - rm -rf /usr/share/backgrounds/bluefin*
+      - rm -rf /usr/share/plymouth/themes/bluefin*
+      - rm -rf /etc/skel/.config/fastfetch
+      
+      # Reset Plymouth boot splash to standard Fedora spinner
+      - plymouth-set-default-theme spinner || true
 
+      # Remove Bluefin's dconf/gschema branding overrides (wallpapers, custom accent colors, logo)
+      - rm -f /usr/share/glib-2.0/schemas/*bluefin*
+      - glib-compile-schemas /usr/share/glib-2.0/schemas/
+
+      # Clean up /etc/os-release branding back to Fedora Silverblue
+      - sed -i 's/^NAME=.*/NAME="Fedora Linux"/' /usr/lib/os-release
+      - sed -i 's/^PRETTY_NAME=.*/PRETTY_NAME="Fedora Linux (Silverblue)"/' /usr/lib/os-release
+      - sed -i 's/^DEFAULT_HOSTNAME=.*/DEFAULT_HOSTNAME="fedora"/' /usr/lib/os-release
+
+  # 3. Copy any of your own custom system files
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  # 4. Flatpak configuration (Bluefin-DX already includes Flathub by default)
   - type: default-flatpaks
     configurations:
       - notify: true
-        scope: user
+        scope: system
         install:
-          - it.mijorus.gearlever
-          - com.ranfdev.DistroShelf
-          - io.missioncenter.MissionCenter
-          - com.visualstudio.code
-          - org.libreoffice.LibreOffice
-          - com.mattjakeman.ExtensionManager
-          - com.github.tchx84.Flatseal
-          - com.usebottles.bottles
+          - org.gnome.Loupe
+      - scope: user
 
-  - type: systemd
-    system:
-      enabled:
-        - tuned.service
-    user:
-      enabled:
-        - podman.socket
-
+  # 5. Required for signed images
   - type: signing

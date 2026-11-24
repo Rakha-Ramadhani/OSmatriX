@@ -16,7 +16,6 @@ modules:
         - fedora-release-identity-silverblue
         - gnome-backgrounds
         - micro
-        - starship
     remove:
       packages:
         - bluefin-logos
@@ -32,11 +31,11 @@ modules:
       - rm -rf /usr/share/backgrounds/bluefin*
       - rm -rf /usr/share/plymouth/themes/bluefin*
       - rm -rf /etc/skel/.config/fastfetch
-      
+
       # Reset Plymouth boot splash to standard Fedora spinner
       - plymouth-set-default-theme spinner || true
 
-      # Remove Bluefin's dconf/gschema branding overrides (wallpapers, custom accent colors, logo)
+      # Remove Bluefin's dconf/gschema branding overrides (wallpapers, custom accent schemes, logo)
       - rm -f /usr/share/glib-2.0/schemas/*bluefin*
       - glib-compile-schemas /usr/share/glib-2.0/schemas/
 
